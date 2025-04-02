@@ -72,3 +72,8 @@ logs/
 Thumbs.db
 
 Learn_more.AI/Learn_more,AI/agent-zero/
+# FFmpeg executables
+**/ffmpeg.exe
+**/ffplay.exe
+**/ffprobe.exe
+**/ffmpeg-master-latest-win64-gpl/
