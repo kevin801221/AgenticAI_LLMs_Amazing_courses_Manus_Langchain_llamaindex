@@ -10,8 +10,7 @@ __pycache__/
 .Python
 
 # Virtual Environment
-# 忽略任何以 .venv 開頭的目錄
-**/.venv*/
+# 忽略任�?�?.venv ?�頭?�目??**/.venv*/
 .venv/
 env/
 venv/
@@ -25,7 +24,7 @@ D:\CourseUpdate\Langchain_course_code\Learn_more.AI\Learn_more,AI
 12-Perplexity_inspired_SEO_LLMs_/llm-answer-engine/
 
 # Project specific directories
-2025_LLM_Agents_course_and_develpoe/Audio_Agent_meeting_recorder/
+
 D:\Github_items\OpenManus
 
 # Jupyter Notebook

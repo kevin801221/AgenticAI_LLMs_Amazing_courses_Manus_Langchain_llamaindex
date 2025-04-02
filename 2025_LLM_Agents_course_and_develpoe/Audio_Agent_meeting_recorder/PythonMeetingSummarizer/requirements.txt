@@ -1,0 +1,7 @@
+gradio==4.44.1
+openai==1.30.0
+python-dotenv==1.0.1
+pydub==0.25.1
+audioop-lts==0.2.1
+pyaudio==0.2.14
+numpy==1.26.4

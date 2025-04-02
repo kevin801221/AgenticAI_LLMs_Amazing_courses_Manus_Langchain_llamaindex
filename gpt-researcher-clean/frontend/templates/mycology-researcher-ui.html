@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>真菌研究者 - 實驗室專屬研究助手</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <style>
+        :root {
+            --primary-color: #2D4739; /* 深綠色 - 代表黴菌/真菌研究 */
+            --secondary-color: #8DAA91; /* 淺綠色 */
+            --accent-color: #E4A33F; /* 金色/黃色 - 顯示重要元素 */
+            --background-color: #F5F7F5; /* 淺灰綠色背景 */
+            --text-color: #333333;
+        }
+        
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #1A2F26;
+        }
+        
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .accent {
+            color: var(--accent-color);
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 自定義進度條樣式 */
+        .progress-bar {
+            height: 8px;
+            background-color: #E0E0E0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-value {
+            height: 100%;
+            background-color: var(--accent-color);
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        /* 真菌圖標動畫 */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .fungi-icon {
+            animation: pulse 2s infinite;
+        }
+        
+        /* 報告卡片懸停效果 */
+        .report-card:hover {
+            transform: translateY(-5px);
+            transition: transform 0.3s ease;
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- 導航欄 -->
+    <nav class="navbar p-4 flex justify-between items-center">
+        <div class="flex items-center">
+            <svg class="w-8 h-8 mr-2 fungi-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z" fill="#E4A33F"/>
+                <path d="M12 7C9.24 7 7 9.24 7 12C7 14.76 9.24 17 12 17C14.76 17 17 14.76 17 12C17 9.24 14.76 7 12 7Z" fill="#E4A33F"/>
+            </svg>
+            <h1 class="text-xl font-bold">真菌研究者</h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <button class="px-4 py-2 rounded hover:bg-opacity-80">報告庫</button>
+            <button class="px-4 py-2 rounded hover:bg-opacity-80">設置</button>
+            <button class="px-4 py-2 rounded bg-yellow-600 hover:bg-yellow-700">幫助</button>
+        </div>
+    </nav>
+
+    <!-- 主要內容 -->
+    <div class="container mx-auto p-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- 左側面板 - 搜索表單 -->
+            <div class="lg:col-span-1">
+                <div class="card p-6">
+                    <h2 class="text-xl font-bold mb-4">研究查詢</h2>
+                    <form id="researchForm">
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-1" for="query">研究問題</label>
+                            <textarea id="query" name="query" rows="3" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500" placeholder="請輸入您想要研究的黴菌相關問題..."></textarea>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-1" for="report_type">報告類型</label>
+                            <select id="report_type" name="report_type" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <option value="research_report">標準研究報告</option>
+                                <option value="detailed_report">深度詳細報告</option>
+                                <option value="deep">深度遞歸研究</option>
+                                <option value="resource_report">資源列表報告</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-1" for="tone">報告語調</label>
+                            <select id="tone" name="tone" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-green-500">
+                                <option value="objective">客觀分析</option>
+                                <option value="analytical">深度分析</option>
+                                <option value="formal">學術正式</option>
+                                <option value="informative">資訊豐富</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-1">資料來源</label>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="form-checkbox" name="data_sources" value="pubmed" checked>
+                                    <span class="ml-2">PubMed</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="form-checkbox" name="data_sources" value="arxiv" checked>
+                                    <span class="ml-2">ArXiv</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="form-checkbox" name="data_sources" value="google_scholar">
+                                    <span class="ml-2">Google Scholar</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="form-checkbox" name="data_sources" value="web" checked>
+                                    <span class="ml-2">網路</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="form-checkbox" name="data_sources" value="local">
+                                    <span class="ml-2">本地文檔</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium mb-1">領域特定過濾</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="form-checkbox" name="filters" value="mycology" checked>
+                                    <span class="ml-2">真菌學</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="form-checkbox" name="filters" value="microbiology">
+                                    <span class="ml-2">微生物學</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="form-checkbox" name="filters" value="medical">
+                                    <span class="ml-2">醫學</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="form-checkbox" name="filters" value="agriculture">
+                                    <span class="ml-2">農業</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="form-checkbox" name="filters" value="biochemistry">
+                                    <span class="ml-2">生物化學</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" class="form-checkbox" name="filters" value="genetics">
+                                    <span class="ml-2">遺傳學</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <button type="submit" class="btn-primary w-full py-2 px-4 rounded font-medium">
+                                開始研究
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 本地文件上傳區域 -->
+                <div class="card p-6 mt-6">
+                    <h2 class="text-xl font-bold mb-4">本地文檔上傳</h2>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        </svg>
+                        <p class="mt-1 text-sm text-gray-600">拖拽文件到此處或</p>
+                        <button class="mt-2 px-3 py-1 text-sm text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500">
+                            瀏覽文件
+                        </button>
+                        <p class="mt-1 text-xs text-gray-500">支持 PDF, DOCX, TXT, CSV 等格式</p>
+                    </div>
+                    <div class="mt-4">
+                        <h3 class="text-sm font-medium mb-2">已上傳文檔</h3>
+                        <ul class="text-sm text-gray-600 space-y-1">
+                            <li class="flex justify-between items-center py-1 px-2 hover:bg-gray-50 rounded">
+                                <span>mycology-research-2023.pdf</span>
+                                <button class="text-red-500 hover:text-red-700">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </li>
+                            <li class="flex justify-between items-center py-1 px-2 hover:bg-gray-50 rounded">
+                                <span>fungal-analysis-data.csv</span>
+                                <button class="text-red-500 hover:text-red-700">
+                                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 右側面板 - 研究進度與結果 -->
+            <div class="lg:col-span-2">
+                <!-- 研究進度區域 -->
+                <div class="card p-6 mb-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">研究進度</h2>
+                        <span class="text-sm px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full">進行中</span>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium">搜尋與資料收集</span>
+                                <span class="text-sm font-medium">100%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-value" style="width: 100%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium">數據分析</span>
+                                <span class="text-sm font-medium">75%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-value" style="width: 75%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium">報告生成</span>
+                                <span class="text-sm font-medium">35%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-value" style="width: 35%"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between mb-1">
+                                <span class="text-sm font-medium">整體完成度</span>
+                                <span class="text-sm font-medium">65%</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-value" style="width: 65%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Langgraph 視覺化預覽區 -->
+                    <div class="mt-6">
+                        <h3 class="text-md font-medium mb-2">研究流程視覺化</h3>
+                        <div class="bg-gray-100 p-4 rounded-lg h-64 flex items-center justify-center">
+                            <p class="text-gray-500">Langgraph 研究流程視覺化將在此顯示</p>
+                            <!-- 這裡將集成 Langgraph 視覺化圖表 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 日誌輸出區域 -->
+                <div class="card p-6 mb-6">
+                    <h2 class="text-xl font-bold mb-4">研究日誌</h2>
+                    <div class="bg-gray-800 text-green-400 font-mono text-sm p-4 rounded-lg h-64 overflow-y-auto">
+                        <p>08:45:12 - 研究查詢已接收: "黑曲霉產生的次級代謝產物及其抗菌特性"</p>
+                        <p>08:45:15 - 開始搜索相關資源...</p>
+                        <p>08:45:32 - 已檢索 PubMed 資料庫，找到 17 篇相關論文</p>
+                        <p>08:45:41 - 已檢索 ArXiv，找到 3 篇相關預印本</p>
+                        <p>08:45:57 - 搜索網絡資源中...</p>
+                        <p>08:46:12 - 已找到 25 個相關網頁，正在分析內容</p>
+                        <p>08:46:35 - 開始提取關鍵信息並整合不同來源的數據</p>
+                        <p>08:47:03 - 解析文獻中關於黑曲霉次級代謝產物的數據...</p>
+                        <p>08:47:22 - 提取抗菌特性相關研究結果...</p>
+                        <p>08:47:48 - 分析最新研究趨勢和研究空白...</p>
+                        <p>08:48:15 - 開始生成研究報告草稿...</p>
+                    </div>
+                </div>
+                
+                <!-- 最近報告 -->
+                <div class="card p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold">最近報告</h2>
+                        <a href="#" class="text-green-600 hover:text-green-800">查看全部</a>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- 報告卡片 1 -->
+                        <div class="card report-card p-4 border border-gray-200 hover:shadow-md transition-all">
+                            <div class="flex justify-between items-start">
+                                <h3 class="font-medium text-md">黑曲霉產生的次級代謝產物研究</h3>
+                                <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">進行中</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">深入分析黑曲霉產生的次級代謝產物及其抗菌特性，包含最新研究趨勢和應用潛力。</p>
+                            <div class="mt-3 flex justify-between items-center">
+                                <span class="text-xs text-gray-500">開始於: 2025/03/21 08:45</span>
+                                <div class="flex space-x-2">
+                                    <button disabled class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded">PDF</button>
+                                    <button disabled class="text-xs px-2 py-1 bg-gray-200 text-gray-700 rounded">DOCX</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 報告卡片 2 -->
+                        <div class="card report-card p-4 border border-gray-200 hover:shadow-md transition-all">
+                            <div class="flex justify-between items-start">
+                                <h3 class="font-medium text-md">木黴菌對植物病原菌的抑制作用</h3>
+                                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">已完成</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">綜述木黴菌作為生物防治劑對各類植物病原真菌的抑制機制和應用案例。</p>
+                            <div class="mt-3 flex justify-between items-center">
+                                <span class="text-xs text-gray-500">完成於: 2025/03/20 14:22</span>
+                                <div class="flex space-x-2">
+                                    <button class="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700">PDF</button>
+                                    <button class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">DOCX</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 報告卡片 3 -->
+                        <div class="card report-card p-4 border border-gray-200 hover:shadow-md transition-all">
+                            <div class="flex justify-between items-start">
+                                <h3 class="font-medium text-md">白色念珠菌生物膜形成機制</h3>
+                                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">已完成</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">分析白色念珠菌生物膜形成的分子機制、調控因素及其在抗藥性中的作用。</p>
+                            <div class="mt-3 flex justify-between items-center">
+                                <span class="text-xs text-gray-500">完成於: 2025/03/18 09:10</span>
+                                <div class="flex space-x-2">
+                                    <button class="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700">PDF</button>
+                                    <button class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">DOCX</button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 報告卡片 4 -->
+                        <div class="card report-card p-4 border border-gray-200 hover:shadow-md transition-all">
+                            <div class="flex justify-between items-start">
+                                <h3 class="font-medium text-md">食用菇類的藥用價值研究進展</h3>
+                                <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">已完成</span>
+                            </div>
+                            <p class="text-sm text-gray-600 mt-2">總結常見食用菇類中生物活性成分的研究進展及其在免疫調節、抗腫瘤等方面的應用前景。</p>
+                            <div class="mt-3 flex justify-between items-center">
+                                <span class="text-xs text-gray-500">完成於: 2025/03/15 16:35</span>
+                                <div class="flex space-x-2">
+                                    <button class="text-xs px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700">PDF</button>
+                                    <button class="text-xs px-2 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">DOCX</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 模擬研究進程的簡單代碼
+        document.getElementById('researchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 這裡將添加與後端 API 的通信邏輯
+            alert('研究請求已提交！實際整合時將連接到 GPT-Researcher API。');
+            
+            // 模擬進度更新
+            const progressBars = document.querySelectorAll('.progress-value');
+            progressBars.forEach(bar => {
+                bar.style.width = '0%';
+                simulateProgress(bar);
+            });
+        });
+        
+        function simulateProgress(element) {
+            let width = 0;
+            const target = Math.random() * 100;
+            const interval = setInterval(() => {
+                if (width >= target) {
+                    clearInterval(interval);
+                } else {
+                    width += 1;
+                    element.style.width = width + '%';
+                    element.parentElement.previousElementSibling.lastElementChild.textContent = Math.round(width) + '%';
+                }
+            }, 50);
+        }
+    </script>
+</body>
+</html>

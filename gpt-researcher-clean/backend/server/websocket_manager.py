@@ -8,9 +8,9 @@ from backend.report_type import BasicReport, DetailedReport
 from backend.chat import ChatAgentWithMemory
 
 from gpt_researcher.utils.enum import ReportType, Tone
-from multi_agents.main import run_research_task
 from gpt_researcher.actions import stream_output  # Import stream_output
 from backend.server.server_utils import CustomLogsHandler
+from gpt_researcher import GPTResearcher  # 导入 GPTResearcher 作为替代
 
 
 class WebSocketManager:
@@ -98,14 +98,20 @@ async def run_agent(task, report_type, report_source, source_urls, document_urls
     
     # Initialize researcher based on report type
     if report_type == "multi_agents":
-        report = await run_research_task(
-            query=task, 
+        # Replace run_research_task with GPTResearcher
+        researcher = GPTResearcher(
+            query=task,
+            query_domains=query_domains,
+            report_type=report_type,
+            report_source=report_source,
+            source_urls=source_urls,
+            document_urls=document_urls,
+            tone=tone,
+            config_path=config_path,
             websocket=logs_handler,  # Use logs_handler instead of raw websocket
-            stream_output=stream_output, 
-            tone=tone, 
             headers=headers
         )
-        report = report.get("report", "")
+        report = await researcher.run()
         
     elif report_type == ReportType.DetailedReport.value:
         researcher = DetailedReport(

@@ -1,0 +1,21 @@
+OPENAI_API_KEY=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
+TAVILY_API_KEY=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
+
+# Ollama 配置
+OLLAMA_BASE_URL=http://localhost:11434
+
+# 文档路径（用于本地文档研究）
+DOC_PATH=./my-docs
+
+# 输出目录
+OUTPUT_DIR=./outputs
+
+# 文档目录
+DOCS_DIR=./docs
+
+# 语言设置（默认中文）
+DEFAULT_LANGUAGE=zh-CN
+
+# 模型设置
+MODEL_NAME=gemma3:12b
+EMBEDDING_MODEL_NAME=gemma3:12b

@@ -1,0 +1,242 @@
+/* 真菌研究報告模板樣式 */
+body {
+    font-family: 'Noto Sans TC', 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #333;
+    font-size: 11pt;
+    line-height: 1.6;
+}
+
+/* 封面設計 */
+.cover-page {
+    position: relative;
+    height: 100vh;
+    background-color: #2D4739;
+    color: white;
+    padding: 2cm;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-sizing: border-box;
+}
+
+.cover-header {
+    text-align: right;
+}
+
+.cover-title {
+    font-size: 36pt;
+    font-weight: bold;
+    margin-bottom: 0.5cm;
+}
+
+.cover-subtitle {
+    font-size: 18pt;
+    margin-bottom: 1cm;
+}
+
+.cover-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+.cover-logo {
+    font-size: 14pt;
+    font-weight: bold;
+}
+
+.cover-date {
+    font-size: 12pt;
+}
+
+/* 目錄樣式 */
+.toc {
+    padding: 2cm;
+    page-break-after: always;
+}
+
+.toc-title {
+    font-size: 24pt;
+    font-weight: bold;
+    color: #2D4739;
+    margin-bottom: 1cm;
+    border-bottom: 2px solid #2D4739;
+    padding-bottom: 0.3cm;
+}
+
+.toc ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.toc li {
+    margin-bottom: 0.3cm;
+}
+
+.toc a {
+    text-decoration: none;
+    color: #333;
+}
+
+.toc .level-1 {
+    font-weight: bold;
+    font-size: 14pt;
+    margin-top: 0.5cm;
+}
+
+.toc .level-2 {
+    padding-left: 1cm;
+    font-size: 12pt;
+}
+
+.toc .level-3 {
+    padding-left: 2cm;
+    font-size: 11pt;
+}
+
+/* 內容樣式 */
+.content {
+    padding: 2cm;
+}
+
+h1 {
+    font-size: 18pt;
+    color: #2D4739;
+    border-bottom: 2px solid #2D4739;
+    padding-bottom: 0.3cm;
+    margin-top: 1.5cm;
+}
+
+h2 {
+    font-size: 14pt;
+    color: #2D4739;
+    margin-top: 1cm;
+}
+
+h3 {
+    font-size: 12pt;
+    color: #2D4739;
+}
+
+p {
+    text-align: justify;
+    margin-bottom: 0.5cm;
+}
+
+/* 表格樣式 */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1cm 0;
+}
+
+table, th, td {
+    border: 1px solid #ddd;
+}
+
+th {
+    background-color: #8DAA91;
+    color: white;
+    padding: 0.3cm;
+    text-align: left;
+}
+
+td {
+    padding: 0.3cm;
+}
+
+/* 圖片樣式 */
+.figure {
+    margin: 1cm 0;
+    text-align: center;
+}
+
+.figure img {
+    max-width: 100%;
+    height: auto;
+}
+
+.figure-caption {
+    font-style: italic;
+    margin-top: 0.3cm;
+    font-size: 10pt;
+    color: #666;
+}
+
+/* 引用與參考文獻 */
+blockquote {
+    border-left: 3px solid #8DAA91;
+    padding-left: 0.5cm;
+    margin-left: 0;
+    font-style: italic;
+    color: #555;
+}
+
+.references {
+    margin-top: 2cm;
+}
+
+.references h1 {
+    font-size: 18pt;
+}
+
+.references ol {
+    padding-left: 1cm;
+}
+
+.references li {
+    margin-bottom: 0.5cm;
+}
+
+/* 頁碼 */
+@page {
+    @bottom-center {
+        content: counter(page);
+        font-size: 10pt;
+    }
+}
+
+/* 強調與重點 */
+.highlight {
+    background-color: #F5F7F5;
+    padding: 0.5cm;
+    margin: 0.5cm 0;
+    border-left: 3px solid #E4A33F;
+}
+
+.key-finding {
+    background-color: #F5F7F5;
+    padding: 0.5cm;
+    margin: 0.5cm 0;
+    border-left: 3px solid #2D4739;
+    font-weight: bold;
+}
+
+/* 真菌相關特定樣式 */
+.fungi-taxonomy {
+    font-style: italic;
+}
+
+.chemical-formula {
+    font-family: 'Courier New', monospace;
+    background-color: #f8f8f8;
+    padding: 0 0.2cm;
+}
+
+.experiment-method {
+    background-color: #f8f8f8;
+    padding: 0.5cm;
+    border: 1px solid #ddd;
+    margin: 0.5cm 0;
+}
+
+/* 注釋 */
+.footnote {
+    font-size: 9pt;
+    color: #666;
+    margin-top: 2cm;
+    border-top: 1px solid #ddd;
+    padding-top: 0.3cm;
+}

@@ -240,8 +240,16 @@ async def handle_file_deletion(filename: str, DOC_PATH: str) -> JSONResponse:
 async def execute_multi_agents(manager) -> Any:
     websocket = manager.active_connections[0] if manager.active_connections else None
     if websocket:
-        report = await run_research_task("Is AI in a hype cycle?", websocket, stream_output)
-        return {"report": report}
+        # 创建一个自定义日志处理器来捕获输出
+        logs_handler = CustomLogsHandler(websocket, "AI_hype_cycle")
+        # 使用 GPTResearcher 替代 run_research_task
+        researcher = GPTResearcher(
+            query="Is AI in a hype cycle?",
+            websocket=logs_handler
+        )
+        # 运行研究任务
+        result = await researcher.run()
+        return {"report": result}
     else:
         return JSONResponse(status_code=400, content={"message": "No active WebSocket connection"})
 

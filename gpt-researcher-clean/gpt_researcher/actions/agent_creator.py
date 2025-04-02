@@ -44,6 +44,10 @@ async def choose_agent(
 
 
 async def handle_json_error(response):
+    if response is None:
+        print("Response is None. Falling back to Default Agent.")
+        return get_default_agent()
+        
     try:
         agent_dict = json_repair.loads(response)
         if agent_dict.get("server") and agent_dict.get("agent_role_prompt"):
@@ -56,18 +60,23 @@ async def handle_json_error(response):
     if json_string:
         try:
             json_data = json.loads(json_string)
-            return json_data["server"], json_data["agent_role_prompt"]
+            if json_data.get("server") and json_data.get("agent_role_prompt"):
+                return json_data["server"], json_data["agent_role_prompt"]
         except json.JSONDecodeError as e:
             print(f"Error decoding JSON: {e}")
 
-    print("No JSON found in the string. Falling back to Default Agent.")
+    print("No valid JSON found in the string. Falling back to Default Agent.")
+    return get_default_agent()
+
+def get_default_agent():
     return "Default Agent", (
         "You are an AI critical thinker research assistant. Your sole purpose is to write well written, "
-        "critically acclaimed, objective and structured reports on given text."
+        "critically acclaimed, objective and structured reports on given queries."
     )
 
-
 def extract_json_with_regex(response):
+    if response is None:
+        return None
     json_match = re.search(r"{.*?}", response, re.DOTALL)
     if json_match:
         return json_match.group(0)

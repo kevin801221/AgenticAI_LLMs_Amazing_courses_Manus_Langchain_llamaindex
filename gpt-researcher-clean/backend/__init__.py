@@ -1,1 +1,3 @@
-from multi_agents import agents
+"""
+Backend module for GPT Researcher
+"""

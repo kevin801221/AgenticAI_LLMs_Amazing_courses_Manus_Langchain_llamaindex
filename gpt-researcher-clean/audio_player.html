@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>特斯拉研究報告 - 語音播放器</title>
+    <title>研究報告 - 語音播放器</title>
     <style>
         body {
             font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
@@ -74,14 +74,36 @@
             margin-top: 20px;
             line-height: 1.6;
         }
+        .report-selector {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f0f7ff;
+            border-radius: 5px;
+            border: 1px solid #cce0ff;
+        }
+        select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            width: 100%;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
-    <h1>特斯拉研究報告 - 語音播放器</h1>
+    <h1>研究報告 - 語音播放器</h1>
     
     <div class="instructions">
-        <p>這是由 GPT-Researcher 生成的特斯拉研究報告，使用 OpenAI 的 TTS API 轉換為語音。</p>
-        <p>您可以選擇收聽原文（英文）或中文翻譯版本的語音報告。</p>
+        <p>這是由 GPT-Researcher 生成的研究報告，使用 OpenAI 的 TTS API 轉換為語音。</p>
+        <p>您可以選擇不同的報告，並選擇收聽原文（英文）或中文翻譯版本的語音報告。</p>
+    </div>
+    
+    <div class="report-selector">
+        <label for="report-select">選擇報告：</label>
+        <select id="report-select" onchange="changeReport()">
+            <option value="tesla">特斯拉研究報告</option>
+            <option value="tech-market">全球科技股市報告</option>
+        </select>
     </div>
     
     <div class="tabs">
@@ -92,23 +114,39 @@
     
     <div id="chinese" class="tab-content audio-container active">
         <h2>中文語音報告</h2>
-        <audio controls>
-            <source src="audio_outputs/task_1741930008_特斯拉_chinese.mp3" type="audio/mpeg">
-            您的瀏覽器不支持音頻元素。
-        </audio>
+        <div id="tesla-chinese-audio">
+            <audio controls>
+                <source src="audio_outputs/task_1741930008_特斯拉_chinese.mp3" type="audio/mpeg">
+                您的瀏覽器不支持音頻元素。
+            </audio>
+        </div>
+        <div id="tech-market-chinese-audio" style="display: none;">
+            <audio controls>
+                <source src="audio_outputs/task_1741934154_幫我寫一個全球科技股市報告書_chinese.mp3" type="audio/mpeg">
+                您的瀏覽器不支持音頻元素。
+            </audio>
+        </div>
     </div>
     
     <div id="english" class="tab-content audio-container">
         <h2>英文語音報告</h2>
-        <audio controls>
-            <source src="audio_outputs/task_1741930008_特斯拉.mp3" type="audio/mpeg">
-            您的瀏覽器不支持音頻元素。
-        </audio>
+        <div id="tesla-english-audio">
+            <audio controls>
+                <source src="audio_outputs/task_1741930008_特斯拉.mp3" type="audio/mpeg">
+                您的瀏覽器不支持音頻元素。
+            </audio>
+        </div>
+        <div id="tech-market-english-audio" style="display: none;">
+            <p>目前沒有英文版本的全球科技股市報告語音文件。</p>
+        </div>
     </div>
     
     <div id="text" class="tab-content audio-container">
         <h2>中文文本報告</h2>
-        <div class="text-container" id="chinese-text">
+        <div id="tesla-chinese-text" class="text-container">
+            正在加載中文文本...
+        </div>
+        <div id="tech-market-chinese-text" class="text-container" style="display: none;">
             正在加載中文文本...
         </div>
     </div>
@@ -119,6 +157,44 @@
     </div>
     
     <script>
+        // 當前選擇的報告
+        let currentReport = "tesla";
+        
+        // 切換報告
+        function changeReport() {
+            const reportSelect = document.getElementById("report-select");
+            currentReport = reportSelect.value;
+            
+            // 隱藏所有報告內容
+            document.getElementById("tesla-chinese-audio").style.display = "none";
+            document.getElementById("tech-market-chinese-audio").style.display = "none";
+            document.getElementById("tesla-english-audio").style.display = "none";
+            document.getElementById("tech-market-english-audio").style.display = "none";
+            
+            if (document.getElementById("text").classList.contains("active")) {
+                document.getElementById("tesla-chinese-text").style.display = "none";
+                document.getElementById("tech-market-chinese-text").style.display = "none";
+                
+                // 顯示當前報告的文本
+                if (currentReport === "tesla") {
+                    document.getElementById("tesla-chinese-text").style.display = "block";
+                    loadTeslaText();
+                } else {
+                    document.getElementById("tech-market-chinese-text").style.display = "block";
+                    loadTechMarketText();
+                }
+            }
+            
+            // 顯示當前報告的音頻
+            if (currentReport === "tesla") {
+                document.getElementById("tesla-chinese-audio").style.display = "block";
+                document.getElementById("tesla-english-audio").style.display = "block";
+            } else {
+                document.getElementById("tech-market-chinese-audio").style.display = "block";
+                document.getElementById("tech-market-english-audio").style.display = "block";
+            }
+        }
+        
         function openTab(evt, tabName) {
             var i, tabcontent, tablinks;
             
@@ -138,14 +214,25 @@
             document.getElementById(tabName).className += " active";
             evt.currentTarget.className += " active";
             
-            // 如果是文本標籤，加載中文文本
+            // 如果是文本標籤，根據當前選擇的報告加載對應的文本
             if (tabName === "text") {
-                loadChineseText();
+                // 隱藏所有文本
+                document.getElementById("tesla-chinese-text").style.display = "none";
+                document.getElementById("tech-market-chinese-text").style.display = "none";
+                
+                // 顯示當前報告的文本
+                if (currentReport === "tesla") {
+                    document.getElementById("tesla-chinese-text").style.display = "block";
+                    loadTeslaText();
+                } else {
+                    document.getElementById("tech-market-chinese-text").style.display = "block";
+                    loadTechMarketText();
+                }
             }
         }
         
-        function loadChineseText() {
-            var textContainer = document.getElementById("chinese-text");
+        function loadTeslaText() {
+            var textContainer = document.getElementById("tesla-chinese-text");
             
             // 如果已經加載過文本，則不再重複加載
             if (textContainer.innerHTML !== "正在加載中文文本...") {
@@ -153,6 +240,24 @@
             }
             
             fetch("audio_outputs/task_1741930008_特斯拉_chinese.txt")
+                .then(response => response.text())
+                .then(text => {
+                    textContainer.innerHTML = text.replace(/\n/g, "<br>");
+                })
+                .catch(error => {
+                    textContainer.innerHTML = "加載文本時出錯：" + error;
+                });
+        }
+        
+        function loadTechMarketText() {
+            var textContainer = document.getElementById("tech-market-chinese-text");
+            
+            // 如果已經加載過文本，則不再重複加載
+            if (textContainer.innerHTML !== "正在加載中文文本...") {
+                return;
+            }
+            
+            fetch("audio_outputs/task_1741934154_幫我寫一個全球科技股市報告書_chinese.txt")
                 .then(response => response.text())
                 .then(text => {
                     textContainer.innerHTML = text.replace(/\n/g, "<br>");
