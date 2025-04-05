@@ -1,0 +1,164 @@
+<CourseFloatingBanner chapter={2}
+  classNames="absolute z-10 right-0 top-0"
+  notebooks={[
+    {label: "Google Colab", value: "https://colab.research.google.com/github/huggingface/agents-course/blob/main/notebooks/unit2/smolagents/retrieval_agents.ipynb"},
+]} />
+
+# 构建智能驱动的 RAG 系统
+
+<Tip>
+您可以通过 <a href="https://huggingface.co/agents-course/notebooks/blob/main/unit2/smolagents/retrieval_agents.ipynb" target="_blank">此 Notebook</a> 跟随代码实践，该文件支持在 Google Colab 中运行。
+</Tip>
+
+检索增强生成（Retrieval-Augmented Generation，RAG）系统结合了数据检索和生成模型的能力，以提供上下文感知的响应。例如，用户的查询会被传递给搜索引擎，检索结果与查询一起提供给模型，模型随后根据查询和检索到的信息生成响应。
+
+智能驱动的 RAG（Retrieval-Augmented Generation）通过**将自主智能体与动态知识检索相结合**，扩展了传统 RAG 系统。
+
+传统 RAG 系统使用 LLM 根据检索数据回答查询，而智能驱动的 RAG **实现了对检索和生成流程的智能控制**，从而提高了效率和准确性。
+
+传统 RAG 系统面临关键限制，例如**依赖单次检索步骤**，以及过度关注与用户查询的直接语义相似性，这可能会忽略相关信息。
+
+智能驱动的 RAG 通过允许智能体自主制定搜索查询、评估检索结果并进行多次检索步骤，以生成更定制化和全面的输出，从而解决这些问题。
+
+## 基于 DuckDuckGo 的基础检索
+
+让我们构建一个能够使用 DuckDuckGo 进行网页搜索的简单智能体。该智能体将检索信息并综合响应来回答查询。通过智能驱动的 RAG，Alfred 的智能体可以：
+
+* 搜索最新的超级英雄派对趋势
+* 优化结果以包含奢侈元素
+* 将信息综合成完整方案
+
+以下是 Alfred 的智能体实现此功能的代码示例：
+
+```python
+from smolagents import CodeAgent, DuckDuckGoSearchTool, HfApiModel
+
+# 初始化搜索工具
+search_tool = DuckDuckGoSearchTool()
+
+# 初始化模型
+model = HfApiModel()
+
+agent = CodeAgent(
+    model=model,
+    tools=[search_tool]
+)
+
+# 使用示例
+response = agent.run(
+    "Search for luxury superhero-themed party ideas, including decorations, entertainment, and catering."
+)
+print(response)
+```
+
+智能体遵循以下流程：
+
+1. **请求分析：** Alfred 的智能体识别查询的关键要素——重点关注装饰、娱乐和餐饮的豪华超级英雄主题派对规划
+2. **执行检索：** 智能体利用 DuckDuckGo 搜索最新相关信息，确保符合 Alfred 对奢侈活动的精细要求
+3. **信息综合：** 收集结果后，智能体将其处理为覆盖派对所有方面的可执行方案
+4. **未来参考存储：** 智能体存储检索信息以便后续活动规划时快速访问，优化后续任务效率
+
+## 自定义知识库工具
+
+对于专业任务，自定义知识库非常宝贵。让我们创建可以查询技术文档或专业知识的向量数据库工具。通过语义搜索，智能体可以找到与 Alfred 需求最相关的信息。
+
+向量数据库（vector database）是通过专业 ML 模型实现丰富文档表示的集合，能够快速搜索和检索文档。
+
+该方法将预定义知识与语义搜索相结合，为活动规划提供上下文感知解决方案。通过专业知识访问，Alfred 可以完善派对的每个细节。
+
+在此示例中，我们将创建从自定义知识库检索派对策划创意的工具。使用 BM25 检索器搜索知识库并返回最佳结果，同时使用 `RecursiveCharacterTextSplitter` 将文档分割为更小的块以提高搜索效率：
+
+```python
+from langchain.docstore.document import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from smolagents import Tool
+from langchain_community.retrievers import BM25Retriever
+from smolagents import CodeAgent, HfApiModel
+
+class PartyPlanningRetrieverTool(Tool):
+    name = "party_planning_retriever"
+    description = "Uses semantic search to retrieve relevant party planning ideas for Alfred’s superhero-themed party at Wayne Manor."
+    inputs = {
+        "query": {
+            "type": "string",
+            "description": "The query to perform. This should be a query related to party planning or superhero themes.",
+        }
+    }
+    output_type = "string"
+
+    def __init__(self, docs, **kwargs):
+        super().__init__(**kwargs)
+        self.retriever = BM25Retriever.from_documents(
+            docs, k=5  # 检索前 5 个文档
+        )
+
+    def forward(self, query: str) -> str:
+        assert isinstance(query, str), "Your search query must be a string"
+
+        docs = self.retriever.invoke(
+            query,
+        )
+        return "\nRetrieved ideas:\n" + "".join(
+            [
+                f"\n\n===== Idea {str(i)} =====\n" + doc.page_content
+                for i, doc in enumerate(docs)
+            ]
+        )
+
+# 模拟派对策划知识库
+party_ideas = [
+    {"text": "A superhero-themed masquerade ball with luxury decor, including gold accents and velvet curtains.", "source": "Party Ideas 1"},
+    {"text": "Hire a professional DJ who can play themed music for superheroes like Batman and Wonder Woman.", "source": "Entertainment Ideas"},
+    {"text": "For catering, serve dishes named after superheroes, like 'The Hulk's Green Smoothie' and 'Iron Man's Power Steak.'", "source": "Catering Ideas"},
+    {"text": "Decorate with iconic superhero logos and projections of Gotham and other superhero cities around the venue.", "source": "Decoration Ideas"},
+    {"text": "Interactive experiences with VR where guests can engage in superhero simulations or compete in themed games.", "source": "Entertainment Ideas"}
+]
+
+source_docs = [
+    Document(page_content=doc["text"], metadata={"source": doc["source"]})
+    for doc in party_ideas
+]
+
+# 分割文档以提高搜索效率
+    text_splitter = RecursiveCharacterTextSplitter(
+    chunk_size=500,
+    chunk_overlap=50,
+    add_start_index=True,
+    strip_whitespace=True,
+    separators=["\n\n", "\n", ".", " ", ""],
+)
+docs_processed = text_splitter.split_documents(source_docs)
+
+# 创建检索工具
+party_planning_retriever = PartyPlanningRetrieverTool(docs_processed)
+
+# 初始化智能体
+agent = CodeAgent(tools=[party_planning_retriever], model=HfApiModel())
+
+# 使用示例
+response = agent.run(
+    "Find ideas for a luxury superhero-themed party, including entertainment, catering, and decoration options."
+)
+
+print(response)
+```
+
+增强后的智能体能够：
+1. 首先检查文档中的相关信息
+2. 结合知识库的洞察
+3. 在内存中维护对话上下文
+
+## 增强的检索能力
+
+构建智能驱动的 RAG 系统时，智能体可以采用以下高级策略：
+
+1. **查询重构：** 智能体可以优化原始查询，生成更匹配目标文档的搜索词
+2. **多步检索：** 智能体可以进行多次搜索，利用初步结果优化后续查询
+3. **多源整合：** 结合来自网页搜索和本地文档等多个来源的信息
+4. **结果验证：** 在将检索内容纳入响应前分析其相关性和准确性
+
+有效的智能驱动 RAG 系统需要仔细考虑几个关键方面。智能体**应根据查询类型和上下文选择可用工具**，记忆系统帮助维护对话历史避免重复检索，后备策略确保在主要检索方法失败时系统仍能提供价值，验证步骤则帮助确保检索信息的准确性和相关性。
+
+## 资源
+
+- [Agentic RAG: 使用查询重构和自查询加速您的 RAG 系统！🚀](https://huggingface.co/learn/cookbook/agent_rag) - 使用 smolagents 开发智能驱动 RAG 系统的实践指南
