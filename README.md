@@ -4,6 +4,7 @@
 ## Large Language Models and Integration of Agents, Multi-Agents Systems, AutoGen, Langchain, LangGraph, Langserve, and Llamaindex Applications
 
 ## Latest Updates
+- **2025/4/5 Added new course folder AgenticAI_LLMs_Amazing_courses_Manus_Langchain_llamaindex/HuggingFacve-agents-course** 
 - **2025/4/4 Added new branch "勤業眾信演講code"** - 為了企業上課準備的深度報告和n8n的模板
 - **LlamaParser (llama cloud) use Gemini2.0 Flash**
 - **ReAct Agentic MCP server tools (Web Scraper automation)**
