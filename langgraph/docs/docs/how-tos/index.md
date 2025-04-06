@@ -163,6 +163,7 @@ These guides show how to use the prebuilt ReAct agent:
 - [How to add human-in-the-loop processes to a ReAct agent](create-react-agent-hitl.ipynb)
 - [How to return structured output from a ReAct agent](create-react-agent-structured-output.ipynb)
 - [How to add semantic search for long-term memory to a ReAct agent](memory/semantic-search.ipynb#using-in-create-react-agent)
+- [How to manage message history in a ReAct agent](create-react-agent-manage-message-history.ipynb)
 
 Interested in further customizing the ReAct agent? This guide provides an
 overview of its underlying implementation to help you customize for your own needs:
@@ -201,11 +202,14 @@ Learn how to set up your app for deployment to LangGraph Platform:
 
 ### Deployment
 
-LangGraph applications can be deployed using LangGraph Cloud, which provides a range of services to help you deploy, manage, and scale your applications.
+LangGraph applications can be deployed using LangGraph Platform, which provides a range of services to help you deploy, manage, and scale your applications.
 
-- [How to deploy to LangGraph cloud](../cloud/deployment/cloud.md)
-- [How to deploy to a self-hosted environment](./deploy-self-hosted.md)
+- [How to deploy to Cloud SaaS](../cloud/deployment/cloud.md)
+- [How to deploy the Self-Hosted Data Plane](../cloud/deployment/self_hosted_data_plane.md)
+- [How to deploy the Self-Hosted Control Plane](../cloud/deployment/self_hosted_control_plane.md)
+- [How to deploy a Standalone Container](../cloud/deployment/standalone_container.md)
 - [How to interact with the deployment using RemoteGraph](./use-remote-graph.md)
+- [How to add TTLs to your LangGraph application](./ttl/configure_ttl.md)
 
 ### Authentication & Access Control
 
@@ -300,6 +304,7 @@ LangGraph Studio is a built-in UI for visualizing, testing, and debugging your a
 - [How to interact with threads in LangGraph Studio](../cloud/how-tos/threads_studio.md)
 - [How to add nodes as dataset examples in LangGraph Studio](../cloud/how-tos/datasets_studio.md)
 - [How to engineer prompts in LangGraph Studio](../cloud/how-tos/iterate_graph_studio.md)
+- [How to test your agent against remote traces](../cloud/how-tos/clone_traces_studio.md)
 
 ## Troubleshooting
 

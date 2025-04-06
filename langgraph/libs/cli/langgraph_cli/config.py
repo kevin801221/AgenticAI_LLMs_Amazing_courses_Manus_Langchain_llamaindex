@@ -3,7 +3,7 @@ import os
 import pathlib
 import textwrap
 from collections import Counter
-from typing import Any, NamedTuple, Optional, TypedDict, Union
+from typing import Any, Literal, NamedTuple, Optional, TypedDict, Union
 
 import click
 
@@ -107,6 +107,36 @@ class StoreConfig(TypedDict, total=False):
     """Optional. Defines the TTL (time-to-live) behavior configuration.
     
     If provided, the store will apply TTL settings according to the configuration.
+    If omitted, no TTL behavior is configured.
+    """
+
+
+class ThreadTTLConfig(TypedDict, total=False):
+    """Configure a default TTL for checkpointed data within threads."""
+
+    strategy: Literal["delete"]
+    """Strategy to use for deleting checkpointed data.
+    
+    Choices:
+      - "delete": Delete all checkpoints for a thread after TTL expires.
+    """
+    default_ttl: Optional[float]
+    """Default TTL (time-to-live) in minutes for checkpointed data."""
+    sweep_interval_minutes: Optional[int]
+    """Interval in minutes between sweep iterations.
+    If omitted, a default interval will be used (typically ~ 5 minutes)."""
+
+
+class CheckpointerConfig(TypedDict, total=False):
+    """Configuration for the built-in checkpointer, which handles checkpointing of state.
+
+    If omitted, no checkpointer is set up (the object store will still be present, however).
+    """
+
+    ttl: Optional[ThreadTTLConfig]
+    """Optional. Defines the TTL (time-to-live) behavior configuration.
+    
+    If provided, the checkpointer will apply TTL settings according to the configuration.
     If omitted, no TTL behavior is configured.
     """
 
@@ -229,7 +259,7 @@ class CorsConfig(TypedDict, total=False):
     allow_origin_regex: str
     """Optional. A regex pattern for matching allowed origins, used if you have dynamic subdomains.
     
-    Example: "^https://.*\.mycompany\.com$"
+    Example: "^https://.*\\.mycompany\\.com$"
     """
     expose_headers: list[str]
     """Optional. List of headers that browsers are allowed to read from the response in cross-origin contexts."""
@@ -355,6 +385,12 @@ class Config(TypedDict, total=False):
     If omitted, no vector index is set up (the object store will still be present, however).
     """
 
+    checkpointer: Optional[CheckpointerConfig]
+    """Optional. Configuration for the built-in checkpointer, which handles checkpointing of state.
+    
+    If omitted, no checkpointer is set up (the object store will still be present, however).
+    """
+
     auth: Optional[AuthConfig]
     """Optional. Custom authentication config, including the path to your Python auth logic and 
     the OpenAPI security definitions it uses.
@@ -404,7 +440,9 @@ def validate_config(config: Config) -> Config:
             "store": config.get("store"),
             "auth": config.get("auth"),
             "http": config.get("http"),
+            "checkpointer": config.get("checkpointer"),
             "ui": config.get("ui"),
+            "ui_config": config.get("ui_config"),
         }
         if config.get("node_version")
         else {
@@ -417,7 +455,9 @@ def validate_config(config: Config) -> Config:
             "store": config.get("store"),
             "auth": config.get("auth"),
             "http": config.get("http"),
+            "checkpointer": config.get("checkpointer"),
             "ui": config.get("ui"),
+            "ui_config": config.get("ui_config"),
         }
     )
 
@@ -738,7 +778,22 @@ def _update_graph_paths(
         FileNotFoundError: If the local file (module) does not actually exist on disk.
         IsADirectoryError: If `module_str` points to a directory instead of a file.
     """
-    for graph_id, import_str in config["graphs"].items():
+    for graph_id, data in config["graphs"].items():
+        if isinstance(data, dict):
+            # Then we're looking for a 'path' key
+            if "path" not in data:
+                raise ValueError(
+                    f"Graph '{graph_id}' must contain a 'path' key if "
+                    f" it is a dictionary."
+                )
+            import_str = data["path"]
+        elif isinstance(data, str):
+            import_str = data
+        else:
+            raise ValueError(
+                f"Graph '{graph_id}' must be a string or a dictionary with a 'path' key."
+            )
+
         module_str, _, attr_str = import_str.partition(":")
         if not module_str or not attr_str:
             message = (
@@ -778,7 +833,10 @@ def _update_graph_paths(
                             "Add its containing package to 'dependencies' list."
                         )
             # update the config
-            config["graphs"][graph_id] = f"{module_str}:{attr_str}"
+            if isinstance(data, dict):
+                config["graphs"][graph_id]["path"] = f"{module_str}:{attr_str}"
+            else:
+                config["graphs"][graph_id] = f"{module_str}:{attr_str}"
 
 
 def _update_auth_path(
@@ -875,6 +933,66 @@ def _update_http_app_path(
         http_config["app"] = f"{module_str}:{attr_str}"
 
 
+def _get_node_pm_install_cmd(config_path: pathlib.Path, config: Config) -> str:
+    def test_file(file_name):
+        full_path = config_path.parent / file_name
+        try:
+            return full_path.is_file()
+        except OSError:
+            return False
+
+    # inspired by `package-manager-detector`
+    def get_pkg_manager_name():
+        try:
+            with open(config_path.parent / "package.json") as f:
+                pkg = json.load(f)
+
+                if (pkg_manager_name := pkg.get("packageManager")) and isinstance(
+                    pkg_manager_name, str
+                ):
+                    return pkg_manager_name.lstrip("^").split("@")[0]
+
+                if (
+                    dev_engine_name := (
+                        (pkg.get("devEngines") or {}).get("packageManager") or {}
+                    ).get("name")
+                ) and isinstance(dev_engine_name, str):
+                    return dev_engine_name
+
+                return None
+        except Exception:
+            return None
+
+    npm, yarn, pnpm, bun = [
+        test_file("package-lock.json"),
+        test_file("yarn.lock"),
+        test_file("pnpm-lock.yaml"),
+        test_file("bun.lockb"),
+    ]
+
+    if yarn:
+        install_cmd = "yarn install --frozen-lockfile"
+    elif pnpm:
+        install_cmd = "pnpm i --frozen-lockfile"
+    elif npm:
+        install_cmd = "npm ci"
+    elif bun:
+        install_cmd = "bun i"
+    else:
+        pkg_manager_name = get_pkg_manager_name()
+
+        if pkg_manager_name == "yarn":
+            install_cmd = "yarn install"
+        elif pkg_manager_name == "pnpm":
+            install_cmd = "pnpm i"
+        elif pkg_manager_name == "bun":
+            install_cmd = "bun i"
+        else:
+            install_cmd = "npm i"
+
+    return install_cmd
+
+
 def python_config_to_docker(
     config_path: pathlib.Path, config: Config, base_image: str
 ) -> tuple[str, dict[str, str]]:
@@ -955,10 +1073,32 @@ ADD {relpath} /deps/{name}
         for fullpath, (relpath, name) in local_deps.real_pkgs.items()
     )
 
+    ui_inst_str: str = ""
+    install_node_str: str = ""
+
+    if config.get("ui") and local_deps.working_dir:
+        install_node_str = "RUN /storage/install-node.sh"
+
+        ui_inst: list[str] = []
+        ui_inst.append(f"ENV LANGGRAPH_UI='{json.dumps(config['ui'])}'")
+        if config.get("ui_config"):
+            ui_inst.append(
+                f"ENV LANGGRAPH_UI_CONFIG='{json.dumps(config['ui_config'])}'"
+            )
+
+        ui_inst.append(
+            f"RUN cd {local_deps.working_dir} && {_get_node_pm_install_cmd(config_path, config)} && tsx /api/langgraph_api/js/build.mts",
+        )
+
+        ui_inst_str = f"""# -- Installing UI dependencies --
+{os.linesep.join(ui_inst)}
+# -- End of UI dependencies install --"""
+
     installs = f"{os.linesep}{os.linesep}".join(
         filter(
             None,
             [
+                install_node_str,
                 pip_config_file_str,
                 pip_pkgs_str,
                 pip_reqs_str,
@@ -979,6 +1119,11 @@ ADD {relpath} /deps/{name}
     if (http_config := config.get("http")) is not None:
         env_vars.append(f"ENV LANGGRAPH_HTTP='{json.dumps(http_config)}'")
 
+    if (checkpointer_config := config.get("checkpointer")) is not None:
+        env_vars.append(
+            f"ENV LANGGRAPH_CHECKPOINTER='{json.dumps(checkpointer_config)}'"
+        )
+
     graphs = config["graphs"]
     env_vars.append(f"ENV LANGSERVE_GRAPHS='{json.dumps(graphs)}'")
 
@@ -993,6 +1138,8 @@ ADD {relpath} /deps/{name}
         f"RUN {pip_install} -e /deps/*",
         "# -- End of local dependencies install --",
         os.linesep.join(env_vars),
+        "",
+        ui_inst_str,
         "",
         f"WORKDIR {local_deps.working_dir}" if local_deps.working_dir else "",
     ]
@@ -1014,31 +1161,7 @@ def node_config_to_docker(
     config_path: pathlib.Path, config: Config, base_image: str
 ) -> tuple[str, dict[str, str]]:
     faux_path = f"/deps/{config_path.parent.name}"
-
-    def test_file(file_name):
-        full_path = config_path.parent / file_name
-        try:
-            return full_path.is_file()
-        except OSError:
-            return False
-
-    npm, yarn, pnpm, bun = [
-        test_file("package-lock.json"),
-        test_file("yarn.lock"),
-        test_file("pnpm-lock.yaml"),
-        test_file("bun.lockb"),
-    ]
-
-    if yarn:
-        install_cmd = "yarn install --frozen-lockfile"
-    elif pnpm:
-        install_cmd = "pnpm i --frozen-lockfile"
-    elif npm:
-        install_cmd = "npm ci"
-    elif bun:
-        install_cmd = "bun i"
-    else:
-        install_cmd = "npm i"
+    install_cmd = _get_node_pm_install_cmd(config_path, config)
     store_config = config.get("store")
     env_additional_config = (
         ""
@@ -1055,6 +1178,10 @@ ENV LANGGRAPH_AUTH='{json.dumps(auth_config)}'
         env_additional_config += f"""
 ENV LANGGRAPH_HTTP='{json.dumps(http_config)}'
 """
+    if (checkpointer_config := config.get("checkpointer")) is not None:
+        env_additional_config += f"""
+ENV LANGGRAPH_CHECKPOINTER='{json.dumps(checkpointer_config)}'
+"""
 
     return (
         f"""FROM {base_image}:{config['node_version']}
@@ -1067,6 +1194,7 @@ RUN cd {faux_path} && {install_cmd}
 {env_additional_config}
 ENV LANGSERVE_GRAPHS='{json.dumps(config["graphs"])}'
 {f"ENV LANGGRAPH_UI='{json.dumps(config['ui'])}'" if config.get("ui") else ""}
+{f"ENV LANGGRAPH_UI_CONFIG='{json.dumps(config['ui_config'])}'" if config.get("ui_config") else ""}
 
 WORKDIR {faux_path}
 

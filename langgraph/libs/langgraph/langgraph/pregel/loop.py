@@ -30,6 +30,7 @@ from typing_extensions import ParamSpec, Self
 
 from langgraph.channels.base import BaseChannel
 from langgraph.checkpoint.base import (
+    EXCLUDED_METADATA_KEYS,
     WRITES_IDX_MAP,
     BaseCheckpointSaver,
     ChannelVersions,
@@ -38,8 +39,6 @@ from langgraph.checkpoint.base import (
     CheckpointTuple,
     PendingWrite,
     copy_checkpoint,
-    create_checkpoint,
-    empty_checkpoint,
 )
 from langgraph.constants import (
     CONF,
@@ -88,6 +87,7 @@ from langgraph.pregel.algo import (
     should_interrupt,
     task_path_str,
 )
+from langgraph.pregel.checkpoint import create_checkpoint, empty_checkpoint
 from langgraph.pregel.debug import (
     map_debug_checkpoint,
     map_debug_task_results,
@@ -155,6 +155,8 @@ class PregelLoop(LoopProtocol):
     manager: Union[None, AsyncParentRunManager, ParentRunManager]
     interrupt_after: Union[All, Sequence[str]]
     interrupt_before: Union[All, Sequence[str]]
+    checkpoint_every_step: bool
+    debug: bool
 
     checkpointer_get_next_version: GetNextVersion
     checkpointer_put_writes: Optional[
@@ -173,6 +175,7 @@ class PregelLoop(LoopProtocol):
             Any,
         ]
     ]
+    _migrate_checkpoint: Optional[Callable[[Checkpoint], None]]
     submit: Submit
     channels: Mapping[str, BaseChannel]
     managed: ManagedValueMapping
@@ -210,7 +213,9 @@ class PregelLoop(LoopProtocol):
         manager: Union[None, AsyncParentRunManager, ParentRunManager] = None,
         input_model: Optional[Type[BaseModel]] = None,
         debug: bool = False,
+        migrate_checkpoint: Optional[Callable[[Checkpoint], None]] = None,
         trigger_to_nodes: Optional[Mapping[str, Sequence[str]]] = None,
+        checkpoint_every_step: bool = True,
     ) -> None:
         super().__init__(
             step=0,
@@ -234,7 +239,9 @@ class PregelLoop(LoopProtocol):
             CONFIG_KEY_CHECKPOINT_ID not in config[CONF]
             or CONFIG_KEY_DEDUPE_TASKS in config[CONF]
         )
+        self._migrate_checkpoint = migrate_checkpoint
         self.trigger_to_nodes = trigger_to_nodes
+        self.checkpoint_every_step = checkpoint_every_step
         self.debug = debug
         if self.stream is not None and CONFIG_KEY_STREAM in config[CONF]:
             self.stream = DuplexStream(self.stream, config[CONF][CONFIG_KEY_STREAM])
@@ -703,8 +710,6 @@ class PregelLoop(LoopProtocol):
         return updated_channels
 
     def _put_checkpoint(self, metadata: CheckpointMetadata) -> None:
-        for k, v in self.config["metadata"].items():
-            metadata.setdefault(k, v)  # type: ignore
         # assign step and parents
         metadata["step"] = self.step
         metadata["parents"] = self.config[CONF].get(CONFIG_KEY_CHECKPOINT_MAP, {})
@@ -719,10 +724,17 @@ class PregelLoop(LoopProtocol):
                     else self.stream_keys
                 ),
             )
-        # create new checkpoint
-        self.checkpoint = create_checkpoint(self.checkpoint, self.channels, self.step)
         # bail if no checkpointer
         if self._checkpointer_put_after_previous is not None:
+            for k, v in self.config["metadata"].items():
+                if k in EXCLUDED_METADATA_KEYS:
+                    continue
+                metadata.setdefault(k, v)  # type: ignore
+
+            # create new checkpoint
+            self.checkpoint = create_checkpoint(
+                self.checkpoint, self.channels, self.step
+            )
             self.checkpoint_metadata = metadata
 
             self.prev_checkpoint_config = (
@@ -893,6 +905,7 @@ class SyncPregelLoop(PregelLoop, ContextManager):
         stream_keys: Union[str, Sequence[str]] = EMPTY_SEQ,
         input_model: Optional[Type[BaseModel]] = None,
         debug: bool = False,
+        migrate_checkpoint: Optional[Callable[[Checkpoint], None]] = None,
         trigger_to_nodes: Optional[Mapping[str, Sequence[str]]] = None,
     ) -> None:
         super().__init__(
@@ -910,6 +923,7 @@ class SyncPregelLoop(PregelLoop, ContextManager):
             interrupt_before=interrupt_before,
             manager=manager,
             debug=debug,
+            migrate_checkpoint=migrate_checkpoint,
             trigger_to_nodes=trigger_to_nodes,
         )
         self.stack = ExitStack()
@@ -978,6 +992,8 @@ class SyncPregelLoop(PregelLoop, ContextManager):
             saved = CheckpointTuple(
                 self.config, empty_checkpoint(), {"step": -2}, None, []
             )
+        elif self._migrate_checkpoint is not None:
+            self._migrate_checkpoint(saved.checkpoint)
         self.checkpoint_config = {
             **self.config,
             **saved.config,
@@ -1036,6 +1052,7 @@ class AsyncPregelLoop(PregelLoop, AsyncContextManager):
         stream_keys: Union[str, Sequence[str]] = EMPTY_SEQ,
         input_model: Optional[Type[BaseModel]] = None,
         debug: bool = False,
+        migrate_checkpoint: Optional[Callable[[Checkpoint], None]] = None,
         trigger_to_nodes: Optional[Mapping[str, Sequence[str]]] = None,
     ) -> None:
         super().__init__(
@@ -1053,6 +1070,7 @@ class AsyncPregelLoop(PregelLoop, AsyncContextManager):
             interrupt_before=interrupt_before,
             manager=manager,
             debug=debug,
+            migrate_checkpoint=migrate_checkpoint,
             trigger_to_nodes=trigger_to_nodes,
         )
         self.stack = AsyncExitStack()
@@ -1121,6 +1139,8 @@ class AsyncPregelLoop(PregelLoop, AsyncContextManager):
             saved = CheckpointTuple(
                 self.config, empty_checkpoint(), {"step": -2}, None, []
             )
+        elif self._migrate_checkpoint is not None:
+            self._migrate_checkpoint(saved.checkpoint)
         self.checkpoint_config = {
             **self.config,
             **saved.config,

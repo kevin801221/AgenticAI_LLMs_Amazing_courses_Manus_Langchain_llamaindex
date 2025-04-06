@@ -2,6 +2,7 @@ import inspect
 import logging
 import typing
 import warnings
+from collections import defaultdict
 from functools import partial
 from inspect import isclass, isfunction, ismethod, signature
 from types import FunctionType
@@ -35,7 +36,16 @@ from langgraph.channels.dynamic_barrier_value import DynamicBarrierValue, WaitFo
 from langgraph.channels.ephemeral_value import EphemeralValue
 from langgraph.channels.last_value import LastValue
 from langgraph.channels.named_barrier_value import NamedBarrierValue
-from langgraph.constants import EMPTY_SEQ, MISSING, NS_END, NS_SEP, SELF, TAG_HIDDEN
+from langgraph.checkpoint.base import Checkpoint
+from langgraph.constants import (
+    EMPTY_SEQ,
+    INTERRUPT,
+    MISSING,
+    NS_END,
+    NS_SEP,
+    SELF,
+    TAG_HIDDEN,
+)
 from langgraph.errors import (
     ErrorCode,
     InvalidUpdateError,
@@ -242,7 +252,7 @@ class StateGraph(Graph):
         metadata: Optional[dict[str, Any]] = None,
         input: Optional[Type[Any]] = None,
         retry: Optional[RetryPolicy] = None,
-        destinations: Optional[Union[dict[str, str], tuple[str]]] = None,
+        destinations: Optional[Union[dict[str, str], tuple[str, ...]]] = None,
     ) -> Self:
         """Adds a new node to the state graph.
         Will take the name of the function/runnable as the node name.
@@ -267,7 +277,7 @@ class StateGraph(Graph):
         metadata: Optional[dict[str, Any]] = None,
         input: Optional[Type[Any]] = None,
         retry: Optional[RetryPolicy] = None,
-        destinations: Optional[Union[dict[str, str], tuple[str]]] = None,
+        destinations: Optional[Union[dict[str, str], tuple[str, ...]]] = None,
     ) -> Self:
         """Adds a new node to the state graph.
 
@@ -291,7 +301,7 @@ class StateGraph(Graph):
         metadata: Optional[dict[str, Any]] = None,
         input: Optional[Type[Any]] = None,
         retry: Optional[RetryPolicy] = None,
-        destinations: Optional[Union[dict[str, str], tuple[str]]] = None,
+        destinations: Optional[Union[dict[str, str], tuple[str, ...]]] = None,
     ) -> Self:
         """Adds a new node to the state graph.
 
@@ -303,7 +313,7 @@ class StateGraph(Graph):
             metadata (Optional[dict[str, Any]]): The metadata associated with the node. (default: None)
             input (Optional[Type[Any]]): The input schema for the node. (default: the graph's input schema)
             retry (Optional[RetryPolicy]): The policy for retrying the node. (default: None)
-            destinations (Optional[Union[dict[str, str], tuple[str]]]): Destinations that indicate where a node can route to.
+            destinations (Optional[Union[dict[str, str], tuple[str, ...]]]): Destinations that indicate where a node can route to.
                 This is useful for edgeless graphs with nodes that return `Command` objects.
                 If a dict is provided, the keys will be used as the target node names and the values will be used as the labels for the edges.
                 If a tuple is provided, the values will be used as the target node names.
@@ -799,11 +809,11 @@ class CompiledStateGraph(CompiledGraph):
                 raise InvalidUpdateError(msg)
 
         # state updaters
-        write_entries: list[Union[ChannelWriteEntry, ChannelWriteTupleEntry]] = [
+        write_entries: tuple[Union[ChannelWriteEntry, ChannelWriteTupleEntry], ...] = (
             ChannelWriteTupleEntry(
                 mapper=_get_root if output_keys == ["__root__"] else _get_updates
-            )
-        ]
+            ),
+        )
 
         # add node and output channel
         if key == START:
@@ -811,20 +821,14 @@ class CompiledStateGraph(CompiledGraph):
                 tags=[TAG_HIDDEN],
                 triggers=[START],
                 channels=[START],
-                writers=[
-                    ChannelWrite(
-                        write_entries,
-                        tags=[TAG_HIDDEN],
-                    ),
-                ],
+                writers=[ChannelWrite(write_entries, tags=[TAG_HIDDEN])],
             )
         elif node is not None:
             input_schema = node.input if node else self.builder.schema
             input_values = {k: k for k in self.builder.schemas[input_schema]}
             is_single_input = len(input_values) == 1 and "__root__" in input_values
 
-            branch_channel = f"branch:to:{key}"
-            self.channels[key] = EphemeralValue(Any, guard=False)
+            branch_channel = CHANNEL_BRANCH_TO.format(key)
             self.channels[branch_channel] = EphemeralValue(Any, guard=False)
             self.nodes[key] = PregelNode(
                 triggers=[branch_channel],
@@ -836,13 +840,8 @@ class CompiledStateGraph(CompiledGraph):
                     input_schema,
                     self.builder.type_hints[input_schema],
                 ),
-                writers=[
-                    # publish to this channel and state keys
-                    ChannelWrite(
-                        write_entries + [ChannelWriteEntry(key, key)],
-                        tags=[TAG_HIDDEN],
-                    ),
-                ],
+                # publish to state keys
+                writers=[ChannelWrite(write_entries, tags=[TAG_HIDDEN])],
                 metadata=node.metadata,
                 retry_policy=node.retry_policy,
                 bound=node.runnable,
@@ -852,21 +851,13 @@ class CompiledStateGraph(CompiledGraph):
 
     def attach_edge(self, starts: Union[str, Sequence[str]], end: str) -> None:
         if isinstance(starts, str):
-            if starts == START:
-                channel_name = f"start:{end}"
-                # register channel
-                self.channels[channel_name] = EphemeralValue(Any)
-                # subscribe to channel
-                self.nodes[end].triggers.append(channel_name)
-                # publish to channel
-                self.nodes[START].writers.append(
+            # subscribe to start channel
+            if end != END:
+                self.nodes[starts].writers.append(
                     ChannelWrite(
-                        [ChannelWriteEntry(channel_name, START)], tags=[TAG_HIDDEN]
+                        (ChannelWriteEntry(CHANNEL_BRANCH_TO.format(end), None),)
                     )
                 )
-            elif end != END:
-                # subscribe to start channel
-                self.nodes[end].triggers.append(starts)
         elif end != END:
             channel_name = f"join:{'+'.join(starts)}:{end}"
             # register channel
@@ -877,7 +868,7 @@ class CompiledStateGraph(CompiledGraph):
             for start in starts:
                 self.nodes[start].writers.append(
                     ChannelWrite(
-                        [ChannelWriteEntry(channel_name, start)], tags=[TAG_HIDDEN]
+                        (ChannelWriteEntry(channel_name, start),), tags=[TAG_HIDDEN]
                     )
                 )
 
@@ -890,7 +881,7 @@ class CompiledStateGraph(CompiledGraph):
             if filtered := [p for p in packets if p != END]:
                 writes = [
                     (
-                        ChannelWriteEntry(f"branch:to:{p}", start)
+                        ChannelWriteEntry(CHANNEL_BRANCH_TO.format(p), None)
                         if not isinstance(p, Send)
                         else p
                     )
@@ -940,6 +931,110 @@ class CompiledStateGraph(CompiledGraph):
                             [ChannelWriteEntry(channel_name, end)], tags=[TAG_HIDDEN]
                         )
                     )
+
+    def _migrate_checkpoint(self, checkpoint: Checkpoint) -> None:
+        """Migrate a checkpoint to new channel layout."""
+
+        values = checkpoint["channel_values"]
+        versions = checkpoint["channel_versions"]
+        seen = checkpoint["versions_seen"]
+
+        # empty checkpoints do not need migration
+        if not versions:
+            return
+
+        # current version
+        if checkpoint["v"] >= 3:
+            return
+
+        # Migrate from start:node to branch:to:node
+        for k in list(versions):
+            if k.startswith("start:"):
+                # confirm node is present
+                node = k.split(":")[1]
+                if node not in self.nodes:
+                    continue
+                # get next version
+                new_k = f"branch:to:{node}"
+                new_v = (
+                    max(versions[new_k], versions.pop(k))
+                    if new_k in versions
+                    else versions.pop(k)
+                )
+                # update seen
+                for ss in (seen.get(node, {}), seen.get(INTERRUPT, {})):
+                    if k in ss:
+                        s = ss.pop(k)
+                        if new_k in ss:
+                            ss[new_k] = max(s, ss[new_k])
+                        else:
+                            ss[new_k] = s
+                # update value
+                if new_k not in values and k in values:
+                    values[new_k] = values.pop(k)
+                # update version
+                versions[new_k] = new_v
+
+        # Migrate from branch:source:condition:node to branch:to:node
+        for k in list(versions):
+            if k.startswith("branch:") and k.count(":") == 3:
+                # confirm node is present
+                node = k.split(":")[-1]
+                if node not in self.nodes:
+                    continue
+                # get next version
+                new_k = f"branch:to:{node}"
+                new_v = (
+                    max(versions[new_k], versions.pop(k))
+                    if new_k in versions
+                    else versions.pop(k)
+                )
+                # update seen
+                for ss in (seen.get(node, {}), seen.get(INTERRUPT, {})):
+                    if k in ss:
+                        s = ss.pop(k)
+                        if new_k in ss:
+                            ss[new_k] = max(s, ss[new_k])
+                        else:
+                            ss[new_k] = s
+                # update value
+                if new_k not in values and k in values:
+                    values[new_k] = values.pop(k)
+                # update version
+                versions[new_k] = new_v
+
+        if not set(self.nodes).isdisjoint(versions):
+            # Migrate from "node" to "branch:to:node"
+            source_to_target = defaultdict(list)
+            for start, end in self.builder.edges:
+                if start != START and end != END:
+                    source_to_target[start].append(end)
+            for k in list(versions):
+                if k == START:
+                    continue
+                if k in self.nodes:
+                    v = versions.pop(k)
+                    c = values.pop(k, MISSING)
+                    for end in source_to_target[k]:
+                        # get next version
+                        new_k = f"branch:to:{end}"
+                        new_v = max(versions[new_k], v) if new_k in versions else v
+                        # update seen
+                        for ss in (seen.get(end, {}), seen.get(INTERRUPT, {})):
+                            if k in ss:
+                                s = ss.pop(k)
+                                if new_k in ss:
+                                    ss[new_k] = max(s, ss[new_k])
+                                else:
+                                    ss[new_k] = s
+                        # update value
+                        if new_k not in values and c is not MISSING:
+                            values[new_k] = c
+                        # update version
+                        versions[new_k] = new_v
+                    # pop interrupt seen
+                    if INTERRUPT in seen:
+                        seen[INTERRUPT].pop(k, MISSING)
 
 
 def _get_state_reader(
@@ -1166,3 +1261,6 @@ def _get_schema(
                     if k in channels and isinstance(channels[k], BaseChannel)
                 },
             )
+
+
+CHANNEL_BRANCH_TO = "branch:to:{}"

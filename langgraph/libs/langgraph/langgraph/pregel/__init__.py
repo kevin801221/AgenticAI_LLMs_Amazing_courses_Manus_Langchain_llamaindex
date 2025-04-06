@@ -48,10 +48,9 @@ from langgraph.channels.base import (
 )
 from langgraph.checkpoint.base import (
     BaseCheckpointSaver,
+    Checkpoint,
     CheckpointTuple,
     copy_checkpoint,
-    create_checkpoint,
-    empty_checkpoint,
 )
 from langgraph.constants import (
     CONF,
@@ -91,6 +90,7 @@ from langgraph.pregel.algo import (
     local_write,
     prepare_next_tasks,
 )
+from langgraph.pregel.checkpoint import create_checkpoint, empty_checkpoint
 from langgraph.pregel.debug import tasks_w_writes
 from langgraph.pregel.io import map_input, read_channels
 from langgraph.pregel.loop import AsyncPregelLoop, StreamProtocol, SyncPregelLoop
@@ -767,6 +767,10 @@ class Pregel(PregelProtocol):
         for name, node in self.get_subgraphs(namespace=namespace, recurse=recurse):
             yield name, node
 
+    def _migrate_checkpoint(self, checkpoint: Checkpoint) -> None:
+        """Migrate a saved checkpoint to new channel layout."""
+        pass
+
     def _prepare_state_snapshot(
         self,
         config: RunnableConfig,
@@ -784,6 +788,9 @@ class Pregel(PregelProtocol):
                 parent_config=None,
                 tasks=(),
             )
+
+        # migrate checkpoint if needed
+        self._migrate_checkpoint(saved.checkpoint)
 
         with ChannelsManager(
             self.channels,
@@ -897,6 +904,9 @@ class Pregel(PregelProtocol):
                 parent_config=None,
                 tasks=(),
             )
+
+        # migrate checkpoint if needed
+        self._migrate_checkpoint(saved.checkpoint)
 
         async with AsyncChannelsManager(
             self.channels,
@@ -1223,6 +1233,8 @@ class Pregel(PregelProtocol):
             # get last checkpoint
             config = ensure_config(self.config, input_config)
             saved = checkpointer.get_tuple(config)
+            if saved is not None:
+                self._migrate_checkpoint(saved.checkpoint)
             checkpoint = (
                 copy_checkpoint(saved.checkpoint) if saved else empty_checkpoint()
             )
@@ -1535,12 +1547,9 @@ class Pregel(PregelProtocol):
                             ),
                             CONFIG_KEY_READ: partial(
                                 local_read,
-                                step + 1,
-                                checkpoint,
                                 channels,
                                 managed,
                                 task,
-                                config,
                             ),
                         },
                     ),
@@ -1636,6 +1645,8 @@ class Pregel(PregelProtocol):
             # get last checkpoint
             config = ensure_config(self.config, input_config)
             saved = await checkpointer.aget_tuple(config)
+            if saved is not None:
+                self._migrate_checkpoint(saved.checkpoint)
             checkpoint = (
                 copy_checkpoint(saved.checkpoint) if saved else empty_checkpoint()
             )
@@ -1944,12 +1955,9 @@ class Pregel(PregelProtocol):
                             ),
                             CONFIG_KEY_READ: partial(
                                 local_read,
-                                step + 1,
-                                checkpoint,
                                 channels,
                                 managed,
                                 task,
-                                config,
                             ),
                         },
                     ),
@@ -2284,6 +2292,7 @@ class Pregel(PregelProtocol):
                 manager=run_manager,
                 debug=debug,
                 trigger_to_nodes=self.trigger_to_nodes,
+                migrate_checkpoint=self._migrate_checkpoint,
             ) as loop:
                 # create runner
                 runner = PregelRunner(
@@ -2577,12 +2586,8 @@ class Pregel(PregelProtocol):
                 interrupt_after=interrupt_after_,
                 manager=run_manager,
                 debug=debug,
-                # `self.nodes` can be modified after creation of `Pregel`. For example,
-                # that's how StateGraph compilation currently works.
-                # For now, we recompute the trigger_to_nodes mapping every time the
-                # loop is created. We could potentially memoize this if it becomes a
-                # performance issue.
-                trigger_to_nodes=_trigger_to_nodes(self.nodes),
+                trigger_to_nodes=self.trigger_to_nodes,
+                migrate_checkpoint=self._migrate_checkpoint,
             ) as loop:
                 # create runner
                 runner = PregelRunner(
