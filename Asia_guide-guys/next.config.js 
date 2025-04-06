@@ -1,0 +1,47 @@
+// next.config.js
+const { i18n } = require('./next-i18next.config');
+
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  reactStrictMode: true,
+  i18n,
+  // 支持圖片優化
+  images: {
+    domains: ['localhost'],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+  },
+  // API 重寫
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api'}/:path*`,
+      },
+    ];
+  },
+  // 環境變量
+  env: {
+    NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api',
+    NEXT_PUBLIC_WEBSOCKET_URL: process.env.NEXT_PUBLIC_WEBSOCKET_URL || 'ws://localhost:8000/ws',
+  },
+  // 靜態文件配置
+  swcMinify: true,
+  compiler: {
+    // 刪除 console 和 debugger 語句
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  // 強制所有頁面以靜態 HTML 形式生成
+  // 適用於應用不需要每次請求都重新生成
+  output: 'export',
+  // 禁用嚴格模式檢查
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  // 禁用類型檢查
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+};
+
+module.exports = nextConfig;

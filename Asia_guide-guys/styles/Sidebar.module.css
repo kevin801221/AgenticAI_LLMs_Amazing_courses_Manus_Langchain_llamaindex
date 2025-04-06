@@ -1,0 +1,36 @@
+/* styles/Sidebar.module.css */
+.menuButton {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    z-index: 1000;
+    background-color: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .drawerContent {
+    width: 280px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .drawerHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+  }
+  
+  .title {
+    font-weight: 600;
+  }
+  
+  .drawerFooter {
+    margin-top: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
