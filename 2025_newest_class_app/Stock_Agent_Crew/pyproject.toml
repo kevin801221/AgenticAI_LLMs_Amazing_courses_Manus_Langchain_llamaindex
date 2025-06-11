@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "4"
+version = "0.1.0"
+description = ""
+authors = ["Ken Cen <kenling1982@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.11,<=3.13"
+langchain = "^0.3.13"
+langchain-community = "^0.3.13"
+langchain-ollama = "^0.2.2"
+crewai = {extras = ["tools"], version = "^0.86.0"}
+langchain-openai = "^0.2.14"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

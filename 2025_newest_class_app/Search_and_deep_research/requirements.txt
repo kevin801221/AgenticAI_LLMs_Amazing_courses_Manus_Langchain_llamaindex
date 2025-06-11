@@ -1,0 +1,57 @@
+# Core Dependencies
+streamlit>=1.28.0
+langchain>=0.1.0
+langchain-community>=0.0.20
+langchain-groq>=0.1.0
+
+# Environment and Configuration
+python-dotenv>=1.0.0
+
+# HTTP Requests and APIs
+requests>=2.31.0
+urllib3>=2.0.0
+
+# ArXiv and Wikipedia APIs
+arxiv>=1.4.0
+wikipedia>=1.4.0
+
+# Text Processing and NLP
+transformers>=4.30.0
+tokenizers>=0.13.0
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# JSON and Data Serialization
+pydantic>=2.0.0
+pydantic-core>=2.0.0
+
+# Async Support
+aiohttp>=3.8.0
+asyncio>=3.4.3
+
+# Logging and Monitoring
+loguru>=0.7.0
+
+# Optional: Enhanced UI Components
+streamlit-chat>=0.1.1
+streamlit-option-menu>=0.3.6
+
+# Optional: Additional LangChain Tools
+langchain-experimental>=0.0.40
+
+# Security and Validation
+certifi>=2023.0.0
+charset-normalizer>=3.0.0
+
+# Development Dependencies (Optional)
+# pytest>=7.4.0
+# pytest-asyncio>=0.21.0
+# black>=23.0.0
+# flake8>=6.0.0
+# mypy>=1.5.0
+
+# Production Dependencies (Optional)
+# gunicorn>=21.0.0
+# uvicorn>=0.23.0
