@@ -2,8 +2,7 @@
 streamlit>=1.28.0
 langchain>=0.1.0
 langchain-community>=0.0.20
-langchain-groq>=0.1.0
-
+langchain-groq
 # Environment and Configuration
 python-dotenv>=1.0.0
 

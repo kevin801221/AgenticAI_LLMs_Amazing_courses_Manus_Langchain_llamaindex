@@ -1,8 +1,8 @@
 """
-Streamlit application for PDF-based Retrieval-Augmented Generation (RAG) using Ollama + LangChain.
+使用 Ollama + LangChain 的 PDF 檔案檢索增強生成 (RAG) Streamlit 應用程式。
 
-This application allows users to upload a PDF, process it,
-and then ask questions about the content using a selected language model.
+此應用程式允許使用者上傳 PDF 檔案，處理它，
+然後使用所選的語言模型對內容提出問題。
 """
 
 import streamlit as st
@@ -55,13 +55,13 @@ logger = logging.getLogger(__name__)
 
 def extract_model_names(models_info: Any) -> Tuple[str, ...]:
     """
-    Extract model names from the provided models information.
+    從提供的模型資訊中提取模型名稱。
 
-    Args:
-        models_info: Response from ollama.list()
+    參數:
+        models_info: 來自 ollama.list() 的回應
 
-    Returns:
-        Tuple[str, ...]: A tuple of model names.
+    返回:
+        Tuple[str, ...]: 模型名稱的元組。
     """
     logger.info("Extracting model names from models_info")
     try:
@@ -82,13 +82,13 @@ def extract_model_names(models_info: Any) -> Tuple[str, ...]:
 
 def create_vector_db(file_upload) -> Chroma:
     """
-    Create a vector database from an uploaded PDF file.
+    從上傳的 PDF 檔案創建向量資料庫。
 
-    Args:
-        file_upload (st.UploadedFile): Streamlit file upload object containing the PDF.
+    參數:
+        file_upload (st.UploadedFile): 包含 PDF 的 Streamlit 檔案上傳物件。
 
-    Returns:
-        Chroma: A vector store containing the processed document chunks.
+    返回:
+        Chroma: 包含處理後文件塊的向量存儲。
     """
     logger.info(f"Creating vector DB from file upload: {file_upload.name}")
     temp_dir = tempfile.mkdtemp()
@@ -121,15 +121,15 @@ def create_vector_db(file_upload) -> Chroma:
 
 def process_question(question: str, vector_db: Chroma, selected_model: str) -> str:
     """
-    Process a user question using the vector database and selected language model.
+    使用向量資料庫和選定的語言模型處理使用者問題。
 
-    Args:
-        question (str): The user's question.
-        vector_db (Chroma): The vector database containing document embeddings.
-        selected_model (str): The name of the selected language model.
+    參數:
+        question (str): 使用者的問題。
+        vector_db (Chroma): 包含文件嵌入的向量資料庫。
+        selected_model (str): 選定的語言模型名稱。
 
-    Returns:
-        str: The generated response to the user's question.
+    返回:
+        str: 對使用者問題生成的回應。
     """
     logger.info(f"Processing question: {question} using model: {selected_model}")
     
@@ -178,13 +178,13 @@ def process_question(question: str, vector_db: Chroma, selected_model: str) -> s
 @st.cache_data
 def extract_all_pages_as_images(file_upload) -> List[Any]:
     """
-    Extract all pages from a PDF file as images.
+    將 PDF 檔案的所有頁面提取為圖像。
 
-    Args:
-        file_upload (st.UploadedFile): Streamlit file upload object containing the PDF.
+    參數:
+        file_upload (st.UploadedFile): 包含 PDF 的 Streamlit 檔案上傳物件。
 
-    Returns:
-        List[Any]: A list of image objects representing each page of the PDF.
+    返回:
+        List[Any]: 表示 PDF 每一頁的圖像物件列表。
     """
     logger.info(f"Extracting all pages as images from file: {file_upload.name}")
     pdf_pages = []
@@ -196,10 +196,10 @@ def extract_all_pages_as_images(file_upload) -> List[Any]:
 
 def delete_vector_db(vector_db: Optional[Chroma]) -> None:
     """
-    Delete the vector database and clear related session state.
+    刪除向量資料庫並清除相關的會話狀態。
 
-    Args:
-        vector_db (Optional[Chroma]): The vector database to be deleted.
+    參數:
+        vector_db (Optional[Chroma]): 要刪除的向量資料庫。
     """
     logger.info("Deleting vector DB")
     if vector_db is not None:
@@ -225,7 +225,7 @@ def delete_vector_db(vector_db: Optional[Chroma]) -> None:
 
 def main() -> None:
     """
-    Main function to run the Streamlit application.
+    運行 Streamlit 應用程式的主函數。
     """
     st.subheader("🧠 Ollama PDF RAG playground", divider="gray", anchor=False)
 

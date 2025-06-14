@@ -1,9 +1,9 @@
-"""Sidebar component for the Streamlit app."""
+"""用於 Streamlit 應用程式的側邊欄組件。"""
 import streamlit as st
 import ollama
 
 def render_sidebar():
-    """Render the sidebar with model selection and controls."""
+    """渲染帶有模型選擇和控制的側邊欄。"""
     with st.sidebar:
         st.subheader("Model Settings")
         
@@ -17,7 +17,7 @@ def render_sidebar():
                 "Select Model",
                 available_models,
                 index=0 if available_models else None,
-                help="Choose a local Ollama model"
+                help="選擇本地 Ollama 模型"
             )
             
             return selected_model

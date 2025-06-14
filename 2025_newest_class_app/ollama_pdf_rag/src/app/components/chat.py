@@ -1,14 +1,14 @@
-"""Chat interface component for the Streamlit app."""
+"""用於 Streamlit 應用程式的聊天介面組件。"""
 import streamlit as st
 from typing import List, Dict
 
 def init_chat_state():
-    """Initialize chat state if not exists."""
+    """如果不存在，初始化聊天狀態。"""
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
 def render_chat_interface(messages: List[Dict]):
-    """Render the chat interface with message history."""
+    """使用消息歷史記錄渲染聊天介面。"""
     with st.container(height=500, border=True):
         # Display chat history
         for message in messages:
@@ -17,5 +17,5 @@ def render_chat_interface(messages: List[Dict]):
                 st.markdown(message["content"])
 
 def add_message(role: str, content: str):
-    """Add a message to the chat history."""
+    """將消息添加到聊天歷史記錄中。"""
     st.session_state.messages.append({"role": role, "content": content}) 

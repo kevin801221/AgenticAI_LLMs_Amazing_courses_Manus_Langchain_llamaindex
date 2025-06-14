@@ -1,4 +1,4 @@
-"""Document processing functionality."""
+"""文件處理功能。"""
 import logging
 from pathlib import Path
 from typing import List
@@ -8,7 +8,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 logger = logging.getLogger(__name__)
 
 class DocumentProcessor:
-    """Handles PDF document loading and processing."""
+    """處理 PDF 文件的載入和處理。"""
     
     def __init__(self, chunk_size: int = 7500, chunk_overlap: int = 100):
         self.chunk_size = chunk_size
@@ -19,7 +19,7 @@ class DocumentProcessor:
         )
     
     def load_pdf(self, file_path: Path) -> List:
-        """Load PDF document."""
+        """載入 PDF 文件。"""
         try:
             logger.info(f"Loading PDF from {file_path}")
             loader = UnstructuredPDFLoader(str(file_path))
@@ -29,7 +29,7 @@ class DocumentProcessor:
             raise
     
     def split_documents(self, documents: List) -> List:
-        """Split documents into chunks."""
+        """將文件分割成區塊。"""
         try:
             logger.info("Splitting documents into chunks")
             return self.splitter.split_documents(documents)
